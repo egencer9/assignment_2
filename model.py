@@ -13,6 +13,26 @@
 from datasets import DatasetDict
 from typing import List, Dict
 import numpy as np
+import torch
+
+
+def get_device():
+    """
+    Dynamically detects and returns the best available hardware accelerator.
+    Supports TPU (Google Colab/Kaggle via PyTorch XLA), CUDA (NVIDIA GPU), 
+    MPS (Apple Silicon GPU), and fallback to CPU.
+    """
+    try:
+        import torch_xla.core.xla_model as xm
+        return xm.xla_device()
+    except ImportError:
+        pass
+
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
 
 
 class Model:
@@ -34,7 +54,6 @@ class Model:
         self.pretrained_model_name = config_dict.get("pretrained_model_name", "xlm-roberta-base")
         self.num_labels = config_dict.get("num_labels", 2)
 
-        import torch
         from transformers import AutoModelForSequenceClassification
 
         self.model = AutoModelForSequenceClassification.from_pretrained(
@@ -42,18 +61,15 @@ class Model:
             num_labels=self.num_labels
         )
         
-        device = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(device)
+        self.model.to(get_device())
 
     def train(self, datasets: List, training_args: Dict = None):
-        import torch
         from transformers import Trainer, TrainingArguments
 
         train_dataset = datasets[0]
         eval_dataset = datasets[1] if len(datasets) > 1 else None
 
-        device = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(device)
+        self.model.to(get_device())
 
         if training_args is None:
             training_args = {}
@@ -98,7 +114,6 @@ class Model:
         self.model.eval()
 
     def predict(self, x) -> List[int]:
-        import torch
         device = next(self.model.parameters()).device
         self.model.eval()
 
@@ -156,14 +171,13 @@ class Model:
     def __getstate__(self):
         state = self.__dict__.copy()
         if "model" in state:
-            # Move model to CPU before serialization to prevent CUDA/MPS loading failures
+            # Move model to CPU before serialization to prevent CUDA/MPS/TPU loading failures on other platforms
             model_cpu = self.model.cpu()
             state["model_state_dict"] = model_cpu.state_dict()
             del state["model"]
         return state
 
     def __setstate__(self, state):
-        import torch
         self.__dict__.update(state)
         from transformers import AutoModelForSequenceClassification
 
@@ -173,8 +187,6 @@ class Model:
         )
         if "model_state_dict" in state:
             self.model.load_state_dict(state["model_state_dict"])
-            del self.model_state_dict
+            del state["model_state_dict"]
 
-        device = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(device)
-
+        self.model.to(get_device())

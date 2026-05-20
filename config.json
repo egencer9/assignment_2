@@ -1,0 +1,13 @@
+{
+  "pretrained_model_name": "xlm-roberta-base",
+  "num_labels": 2,
+  "num_train_epochs": 2,
+  "learning_rate": 2e-05,
+  "per_device_train_batch_size": 32,
+  "per_device_eval_batch_size": 32,
+  "weight_decay": 0.01,
+  "max_length": 128,
+  "output_dir": "./results",
+  "train_subset_size_per_class": 10000,
+  "eval_subset_size_per_class": 1000
+}
