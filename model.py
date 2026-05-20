@@ -117,19 +117,34 @@ class Model:
         device = next(self.model.parameters()).device
         self.model.eval()
 
-        # 1. Check if list of strings
+        # 1. Check if HF Dataset
+        from datasets import Dataset
+        if isinstance(x, Dataset):
+            from transformers import Trainer
+            trainer = Trainer(model=self.model)
+            output = trainer.predict(x)
+            predictions = np.argmax(output.predictions, axis=-1).tolist()
+            return predictions
+
+        # 2. Check if list of strings
         if isinstance(x, list) and len(x) > 0 and isinstance(x[0], str):
             from transformers import AutoTokenizer
             tokenizer = AutoTokenizer.from_pretrained(self.pretrained_model_name)
-            inputs = tokenizer(x, return_tensors="pt", padding=True, truncation=True, max_length=512)
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-            logits = outputs.logits
-            predictions = torch.argmax(logits, dim=-1).cpu().numpy().tolist()
+            # Batch string predictions to prevent GPU Out Of Memory
+            batch_size = 64
+            predictions = []
+            for i in range(0, len(x), batch_size):
+                batch_x = x[i:i+batch_size]
+                inputs = tokenizer(batch_x, return_tensors="pt", padding=True, truncation=True, max_length=512)
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+                with torch.no_grad():
+                    outputs = self.model(**inputs)
+                logits = outputs.logits
+                batch_preds = torch.argmax(logits, dim=-1).cpu().numpy().tolist()
+                predictions.extend(batch_preds)
             return predictions
 
-        # 2. Check if HF dataset style dict
+        # 3. Check if HF dataset style dict
         elif isinstance(x, dict):
             inputs = {k: torch.tensor(v).to(device) if not isinstance(v, torch.Tensor) else v.to(device) for k, v in x.items()}
             with torch.no_grad():
@@ -138,7 +153,7 @@ class Model:
             predictions = torch.argmax(logits, dim=-1).cpu().numpy().tolist()
             return predictions
 
-        # 3. Check if list of list of ints (input IDs)
+        # 4. Check if list of list of ints (input IDs)
         elif isinstance(x, list) and len(x) > 0 and isinstance(x[0], list) and isinstance(x[0][0], int):
             input_ids = torch.tensor(x).to(device)
             with torch.no_grad():
