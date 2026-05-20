@@ -89,23 +89,23 @@ Here are the results evaluated on the validation dataset (`data/valid.csv`):
 | Metric | Score |
 | :--- | :--- |
 | **Baseline F1-Score** | `0.7958` |
-| **Our Validation F1-Score** | **[TO_BE_FILLED]%** |
-| **Validation Accuracy** | **[TO_BE_FILLED]%** |
-| **Validation Precision** | **[TO_BE_FILLED]%** |
-| **Validation Recall** | **[TO_BE_FILLED]%** |
+| **Our Validation F1-Score** | **89.94%** |
+| **Validation Accuracy** | **89.91%** |
+| **Validation Precision** | **89.87%** |
+| **Validation Recall** | **90.01%** |
 
 ---
 
 ## 🤗 Hugging Face Model Hub
 
 The trained model has been uploaded publicly to Hugging Face:
-* **Hugging Face Model Link:** `https://huggingface.co/your-username/your-repo-name`
+* **Hugging Face Model Link:** `https://huggingface.co/egencer9/xlm-roberta-base-fine-tuned`
 
 To pull and use the model directly in Python:
 ```python
 from transformers import pipeline
 
-classifier = pipeline("text-classification", model="your-username/your-repo-name")
+classifier = pipeline("text-classification", model="egencer9/xlm-roberta-base-fine-tuned")
 print(classifier("Super vendeur !"))
 ```
 

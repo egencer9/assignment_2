@@ -65,7 +65,7 @@ if __name__ == "__main__":
         raise ValueError("Please provide either --valid or --test flag")
 
     # Load the model
-    model_checkpoint = "huggingface-link"
+    model_checkpoint = "egencer9/xlm-roberta-base-fine-tuned"
     classifier = pipeline("text-classification", model_checkpoint, device=DEVICE, max_length=MAX_LENGTH)
 
     # Preprocessing
